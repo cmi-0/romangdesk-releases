@@ -7,7 +7,7 @@
  * - 날짜는 시트에 '2026.11.07.' 글자로 적는다 (점으로 입력·표시 통일). 앱과는 2026-11-07로 주고받는다.
  * 붙이는 곳: 구글 시트 → 확장 프로그램 → Apps Script → 이 파일(Code.gs)과 Dialog.html
  */
-const VERSION = '1.5.1';
+const VERSION = '1.5.3';
 const LAYOUT_VER = 2;            // 시트 모양 버전 (올라가면 동기화·시트 준비하기 때 한 번 정리)
 const APP_BG = '#f0f1f4';        // 앱이 쓰는 칸 (연회색) — 고쳐도 되돌아가요
 const TS_FMT = 'yyyy.mm.dd. hh:mm';
@@ -765,7 +765,7 @@ function sync_(req) {
         // 포스트잇·일정 노트: 시트에서 글자 칸('내용'·'노트')을 고쳤으면 그 글자로 서식을 다시 만들고, 비어 있으면 서식에서 글자를 뽑는다
         if (RICH_TABS.indexOf(key) >= 0 && !r.del) {
           const p0 = String(r.plain || '').trim(), plain = p0 ? memoText_(textHtml_(p0)) : '', fromHtml = memoText_(r.html);
-          if (plain && plain !== fromHtml && plain !== memoTextOld_(r.html)) { r.html = textHtml_(plain); r.plain = plain; wrote = true; }
+          if (plain && plain !== fromHtml && plain !== memoText_(r.html, true) && plain !== memoTextOld_(r.html)) { r.html = textHtml_(plain); r.plain = plain; wrote = true; }
           else if (p0 !== fromHtml) { r.plain = fromHtml; wrote = true; }
         }
       });
@@ -849,19 +849,28 @@ function wire_(key, r) {
 }
 // 포스트잇·일정 노트 서식(html) ↔ 글자
 // 줄을 여는 태그(<div> 등) 앞에서도 줄을 바꾼다: 첫 줄은 그냥 글자, 둘째 줄부터 <div>로 저장되기 때문 (안 그러면 첫 줄과 둘째 줄이 붙는다)
-function memoText_(html) {
-  return memoTextRaw_(String(html || '').replace(/<(div|p|ul|ol|hr)\b[^>]*>/gi, '\u0001$&'))
+function memoText_(html, legacy) {
+  return memoTextRaw_(String(html || '').replace(/<(div|p|ul|ol|hr)\b[^>]*>/gi, '\u0001$&'), legacy)
     .replace(/(^|\n)[ \t]*\u0001+/g, '$1').replace(/[ \t]*\u0001+(?=[ \t]*\n)/g, '').replace(/[ \t]*\u0001+/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 // 1.4.11까지의 글자 뽑기 (시트 '내용' 칸에 예전 방식으로 적힌 글자를 '선생님이 고친 것'으로 잘못 알지 않으려고 남겨 둔다)
-function memoTextOld_(html) { return memoTextRaw_(html).replace(/\u0001/g, ''); }
-function memoTextRaw_(html) {
-  return String(html || '')
+function memoTextOld_(html) { return memoTextRaw_(html, true).replace(/\u0001/g, ''); }
+// legacy: 1.5.2까지의 방식 (표 칸은 띄어쓰기, 첨부 앞 📎는 글 안에 있었음) → 시트에 예전 방식으로 적힌 글자를 '고친 것'으로 잘못 알지 않게
+function memoTextRaw_(html, legacy) {
+  let s = String(html || '');
+  if (!legacy) s = s
+    .replace(/(<a\b[^>]*class="[^"]*\bmfile\b[^"]*"[^>]*>)(?!\s*📎)/gi, '$1📎 ') // 첨부: 📎 이름 · 크기 (주소)
+    .replace(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi, function (m, inner) { // 표: | 칸 | 칸 | (줄마다 한 줄)
+      const cells = inner.split(/<\/t[dh]>/i).slice(0, -1).map(function (c) { return c.replace(/<t[dh]\b[^>]*>/i, '').replace(/\u0001/g, '').replace(/<br\s*\/?>|<\/?(div|p|li|ul|ol)\b[^>]*>/gi, ' '); });
+      return '\u0002| ' + cells.join(' | ') + ' |\u0002';
+    });
+  return s
     .replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, function (m, h, t) { return t + ' (' + h + ')'; }) // 글자에 건 링크: 글자 (주소)
-    .replace(/<\/t[dh]>/gi, ' ').replace(/<\/tr>/gi, '\n') // 표: 칸은 띄어쓰기, 줄은 줄바꿈
+    .replace(/<\/t[dh]>/gi, ' ').replace(/<\/tr>/gi, '\n') // (예전 방식) 표: 칸은 띄어쓰기, 줄은 줄바꿈
     .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(div|p|li)>/gi, '\n').replace(/<li[^>]*>/gi, '• ').replace(/<img[^>]*>/gi, '\n[이미지]\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+    .replace(/\u0002+/g, '\n').replace(/\n+(?=\| )/g, '\n').replace(/^\| .*\|[ \t]*$/gm, function (l) { return l.replace(/[ \t]{2,}/g, ' ').trim(); }) // 표 줄: 빈 줄 없이, 칸 안 빈칸은 하나로
     .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 function textHtml_(t) {
