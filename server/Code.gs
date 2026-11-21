@@ -8,9 +8,11 @@
  *
  * 처음 한 번: 이 파일을 붙여 넣고 저장 → 위쪽 함수 칸에서 rdSetup 고르기 → ▷ 실행(권한 허용)
  *            → 배포 → 배포 관리 → ✏ → 버전 '새 버전' → 배포
+ * 만든 사람만: rdUseNext를 실행하면 이 시트가 미리보기 판(server/next)을 먼저 받는다 (되돌리기: rdUseStable)
+ *            → 이 시트에 연결된 PC 앱·웹앱도 미리보기 판을 받는다
  */
 const RD_SRC = 'https://raw.githubusercontent.com/cmi-0/romangdesk-releases/HEAD/server/';
-const RD_SHELL = 1;              // 껍데기 판 (서버 코드가 껍데기를 알아보는 데 씀)
+const RD_SHELL = 2;              // 껍데기 판 (서버 코드가 껍데기를 알아보는 데 씀) · 2: 미리보기 칸
 const RD_CHECK_MS = 6 * 3600e3;  // 새 판 확인 간격
 const RD_CHUNK = 8000;           // 스크립트 속성 한 칸에 넣는 글자 수 (한 칸 9KB 제한)
 var RD_ = { ver: '', slot: '', err: '', files: {} };
@@ -37,26 +39,30 @@ function rdWrite_(P, slot, ver, got) {
   out['rdsrc.' + slot + '.meta'] = JSON.stringify({ ver: ver, files: files, at: Date.now() });
   P.setProperties(out);
 }
-function rdFetch_(name, v) {
-  const r = UrlFetchApp.fetch(RD_SRC + encodeURIComponent(name) + '?v=' + encodeURIComponent(v || Date.now()), { muteHttpExceptions: true });
+function rdChannel_() { return PropertiesService.getScriptProperties().getProperty('rdsrc.channel') === 'next' ? 'next' : ''; }
+function rdFetch_(name, v, dir) {
+  const r = UrlFetchApp.fetch(RD_SRC + (dir || '') + encodeURIComponent(name) + '?v=' + encodeURIComponent(v || Date.now()), { muteHttpExceptions: true });
   if (r.getResponseCode() !== 200) throw new Error(name + '을(를) 받지 못했어요 (' + r.getResponseCode() + ')');
   return r.getContentText();
 }
-// 새 판 받기. force: 확인 간격을 따지지 않고 바로. 돌려줌: { ok, changed, from, to, error }
-function rdUpdate_(force) {
+// 새 판 받기. force: 확인 간격을 따지지 않고 바로. down: 낮은 판으로도 바꿈(미리보기 → 정식으로 되돌릴 때). 돌려줌: { ok, changed, from, to, error }
+function rdUpdate_(force, down) {
   const P = PropertiesService.getScriptProperties(), all = P.getProperties();
   if (!force && Date.now() - Number(all['rdsrc.at'] || 0) < RD_CHECK_MS) return { ok: true, changed: false };
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return { ok: false, error: '다른 업데이트가 진행 중이에요' };
   try {
     const cur = all['rdsrc.cur'] || '', curMeta = JSON.parse(all['rdsrc.' + cur + '.meta'] || 'null'), from = curMeta ? curMeta.ver : '';
-    const meta = JSON.parse(rdFetch_('version.json'));
+    // 미리보기 칸(만든 사람 시트)은 server/next, 없으면 정식 칸
+    let dir = rdChannel_() === 'next' ? 'next/' : '', meta = null;
+    if (dir) { try { meta = JSON.parse(rdFetch_('version.json', '', dir)); } catch (e) { dir = ''; } }
+    if (!meta) meta = JSON.parse(rdFetch_('version.json'));
     P.setProperty('rdsrc.at', String(Date.now()));
     if (!meta || !meta.version) throw new Error('최신 판 정보가 이상해요');
-    if (from && rdNum_(meta.version) <= rdNum_(from)) return { ok: true, changed: false, from: from, to: from };
+    if (from && (down ? meta.version === from : rdNum_(meta.version) <= rdNum_(from))) return { ok: true, changed: false, from: from, to: from };
     if (!force && all['rdsrc.bad'] === meta.version) return { ok: true, changed: false, from: from, to: from }; // 오류를 낸 판은 저절로 다시 받지 않는다
     const names = (meta.files && meta.files.length ? meta.files : ['core.gs', 'Dialog.html']), got = {};
-    names.forEach(function (n) { got[n] = rdFetch_(n, meta.version); });
+    names.forEach(function (n) { got[n] = rdFetch_(n, meta.version, dir); });
     const core = got['core.gs'] || '';
     if (core.indexOf("const VERSION = '" + meta.version + "'") < 0) throw new Error('받은 서버 코드가 ' + meta.version + ' 판이 아니에요');
     new Function(core); // 문법만 미리 확인 (실행하지 않음)
@@ -74,7 +80,19 @@ function rdFile_(name) {
   try { RD_.files[name] = RD_.slot ? rdRead_(PropertiesService.getScriptProperties().getProperties(), RD_.slot, name) : null; } catch (e) { RD_.files[name] = null; }
   return RD_.files[name];
 }
-function rdInfo_() { return { shell: RD_SHELL, ver: RD_.ver, slot: RD_.slot, err: RD_.err }; }
+function rdInfo_() { return { shell: RD_SHELL, ver: RD_.ver, slot: RD_.slot, err: RD_.err, channel: rdChannel_() }; }
+
+// 만든 사람용 (편집기에서 실행): 이 시트는 미리보기 판을 먼저 받는다 / 정식 판으로 되돌린다
+function rdUseNext() {
+  PropertiesService.getScriptProperties().setProperty('rdsrc.channel', 'next');
+  const r = rdUpdate_(true);
+  Logger.log('미리 받기 켬 · ' + (r.ok ? (r.changed ? '미리보기 판 ' + r.to + '을(를) 받았어요' : '지금 판 ' + (r.to || RD_.ver) + ' (미리보기 칸에 더 새 판이 없어요)') : '확인 못 함: ' + r.error) + ' · 연결된 앱도 다음 동기화 때 미리보기 판으로 바뀌어요');
+}
+function rdUseStable() {
+  PropertiesService.getScriptProperties().deleteProperty('rdsrc.channel');
+  const r = rdUpdate_(true, true);
+  Logger.log('미리 받기 끔 · ' + (r.ok ? '정식 판 ' + (r.to || RD_.ver) : '확인 못 함: ' + r.error));
+}
 
 // 처음 한 번 (편집기에서 실행): 서버 코드 받기 + 권한 허용 + 드라이브 폴더 준비
 function rdSetup() {
