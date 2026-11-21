@@ -7,7 +7,7 @@
  * - 날짜는 시트에 '2026.11.07.' 글자로 적는다 (점으로 입력·표시 통일). 앱과는 2026-11-07로 주고받는다.
  * 붙이는 곳: 구글 시트 → 확장 프로그램 → Apps Script → 이 파일(Code.gs)과 Dialog.html
  */
-const VERSION = '1.5.4';
+const VERSION = '1.5.5';
 const LAYOUT_VER = 2;            // 시트 모양 버전 (올라가면 동기화·시트 준비하기 때 한 번 정리)
 const APP_BG = '#f0f1f4';        // 앱이 쓰는 칸 (연회색) — 고쳐도 되돌아가요
 const TS_FMT = 'yyyy.mm.dd. hh:mm';
@@ -739,7 +739,7 @@ function flags_() {
   try { maker = s.map['제작자 정보'] ? String(s.sh.getRange(s.map['제작자 정보'].row, 2).getDisplayValue()).trim() : String(s.sh.getRange(6, 2).getDisplayValue()).trim(); } catch (e) {}
   const bp = PropertiesService.getScriptProperties();
   const bk = { on: bp.getProperty('bkOn') === '1', last: Number(bp.getProperty('bkLast')) || 0 }; // 시트 자동 백업 (1.4.17부터)
-  return { neis: has('neisKey'), air: has('airKey'), admin: has('adminPw'), maker: maker, notes: true, backup: bk, v: VERSION, shell: typeof RD_SHELL !== 'undefined' ? RD_SHELL : 0 }; // notes: 일정 노트·분류·끝 날짜 칸을 아는 서버 · v: 서버 판 (1.5.1부터, 앱이 업데이트 안내에 씀)
+  return { neis: has('neisKey'), air: has('airKey'), admin: has('adminPw'), maker: maker, notes: true, backup: bk, v: VERSION, shell: typeof RD_SHELL !== 'undefined' ? RD_SHELL : 0, early: PropertiesService.getScriptProperties().getProperty('rdsrc.channel') === 'next' }; // early: 만든 사람 시트 → 연결된 앱도 미리보기 판 // notes: 일정 노트·분류·끝 날짜 칸을 아는 서버 · v: 서버 판 (1.5.1부터, 앱이 업데이트 안내에 씀)
 }
 
 /* ============================ 동기화 ============================ */
