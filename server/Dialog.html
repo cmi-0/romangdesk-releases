@@ -1,18 +1,6 @@
 <!DOCTYPE html>
 <html><head><base target="_top"><meta charset="utf-8">
-<style>
-  body{font-family:'Malgun Gothic',sans-serif;color:#34324a;font-size:13px;margin:0;padding:14px 16px;background:#fbf9f4}
-  h3{margin:0 0 4px;font-size:15px} .sub{color:#6e6b85;font-size:12px;margin-bottom:10px;line-height:1.5}
-  label{display:block;font-weight:700;margin:10px 0 3px;font-size:12px}
-  input[type=text],textarea{width:100%;box-sizing:border-box;border:1.5px solid #34324a;border-radius:8px;padding:6px 8px;font:inherit;background:#fff}
-  textarea{height:64px;font-size:11px;word-break:break-all;resize:none}
-  .row{display:flex;gap:8px;align-items:flex-start} .row>*{min-width:0}
-  button{border:1.5px solid #34324a;border-radius:8px;background:#e4def2;padding:5px 12px;font:inherit;font-weight:700;cursor:pointer;box-shadow:2px 2px 0 #34324a}
-  #qr{width:190px;height:190px;border:1.5px solid #34324a;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden}
-  #qr svg{width:178px;height:178px}
-  .warn{margin-top:10px;background:#f6e6c8;border:1.5px solid #b48a3c;border-radius:8px;padding:7px 9px;font-size:11.5px;line-height:1.5}
-  .ok{color:#3f7a58;font-weight:700;font-size:12px;margin-left:6px}
-  .hint{color:#6e6b85;font-size:11px;margin-top:3px;line-height:1.5}
+<style>body{font-family:Malgun Gothic,sans-serif;color:#34324a;font-size:13px;margin:0;padding:14px 16px;background:#fbf9f4}h3{margin:0 0 4px;font-size:15px}.sub{color:#6e6b85;font-size:12px;margin-bottom:10px;line-height:1.5}label{display:block;font-weight:700;margin:10px 0 3px;font-size:12px}input[type=text],textarea{width:100%;box-sizing:border-box;border:1.5px solid #34324a;border-radius:8px;padding:6px 8px;font:inherit;background:#fff}textarea{height:64px;font-size:11px;word-break:break-all;resize:none}.row{display:flex;gap:8px;align-items:flex-start}.row>*{min-width:0}button{border:1.5px solid #34324a;border-radius:8px;background:#e4def2;padding:5px 12px;font:inherit;font-weight:700;cursor:pointer;box-shadow:2px 2px #34324a}#qr{width:190px;height:190px;border:1.5px solid #34324a;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;overflow:hidden}#qr svg{width:178px;height:178px}.warn{margin-top:10px;background:#f6e6c8;border:1.5px solid #b48a3c;border-radius:8px;padding:7px 9px;font-size:11.5px;line-height:1.5}.ok{color:#3f7a58;font-weight:700;font-size:12px;margin-left:6px}.hint{color:#6e6b85;font-size:11px;margin-top:3px;line-height:1.5}
 </style></head><body>
 <h3 id="ttl"></h3>
 <div class="sub" id="sub"></div>
@@ -2333,26 +2321,5 @@ var qrcode = function() {
     return qrcode;
 }));
 </script>
-<script>
-var DATA = <?!= data ?>;
-var $ = function(s){return document.querySelector(s)};
-function b64u(s){return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
-function keyOf(){var u=$('#exec').value.trim(); if(!/^https:\/\/script\.google\.com\//.test(u)) return ''; return 'RD1.'+b64u(JSON.stringify({u:u,c:DATA.code}))}
-function draw(){
-  var k=keyOf(); $('#key').value=k||'(웹앱 주소를 먼저 넣어 주세요)';
-  var app=$('#app').value.trim().replace(/\/+$/,'');
-  var q=$('#qr');
-  if(!k||!/^https:\/\//.test(app)){q.innerHTML='<span class="hint">웹앱 주소와 앱 주소가<br>모두 필요해요</span>';return}
-  try{var qr=qrcode(0,'L');qr.addData(app+'/#k='+k);qr.make();q.innerHTML=qr.createSvgTag({cellSize:4,margin:2,scalable:true})}
-  catch(e){q.innerHTML='<span class="hint">QR을 만들지 못했어요</span>'}
-}
-if(DATA.isNew){$('#ttl').textContent='🔗 새 연결 코드를 만들었어요';$('#sub').innerHTML='지금까지 연결한 기기는 <b>모두 끊겼어요.</b> PC는 연결 키를 다시 붙여 넣고, 폰·태블릿은 QR을 다시 찍어 주세요.<br>나중에 기기를 더 연결할 때는 메뉴 <b>기기 추가하기</b>로 이 키와 QR을 다시 볼 수 있어요.'}
-else{$('#ttl').textContent='➕ 기기 추가하기';$('#sub').innerHTML='지금 쓰는 연결 키와 QR이에요. 새 기기에 넣어도 <b>이미 연결된 기기는 그대로</b>예요.'}
-$('#exec').value=DATA.execUrl||''; $('#app').value=DATA.appUrl||'';
-$('#exec').oninput=draw;
-$('#exec').onchange=function(){google.script.run.saveExecUrl($('#exec').value.trim())};
-$('#app').oninput=function(){draw()};
-$('#app').onchange=function(){google.script.run.saveAppUrl($('#app').value.trim())};
-$('#cp').onclick=function(){var k=keyOf();if(!k)return;navigator.clipboard.writeText(k).then(function(){$('#cpm').textContent='복사했어요'},function(){$('#key').select();document.execCommand('copy');$('#cpm').textContent='복사했어요'})};
-draw();
+<script>var DATA=<?!= data ?>,$=function(e){return document.querySelector(e)};function b64u(e){return btoa(e).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}function keyOf(){var e=$("#exec").value.trim();return/^https:\/\/script\.google\.com\//.test(e)?"RD1."+b64u(JSON.stringify({u:e,c:DATA.code})):""}function draw(){var e=keyOf();$("#key").value=e||"(웹앱 주소를 먼저 넣어 주세요)";var r=$("#app").value.trim().replace(/\/+$/,""),t=$("#qr");if(!e||!/^https:\/\//.test(r)){t.innerHTML='<span class="hint">웹앱 주소와 앱 주소가<br>모두 필요해요</span>';return}try{var n=qrcode(0,"L");n.addData(r+"/#k="+e),n.make(),t.innerHTML=n.createSvgTag({cellSize:4,margin:2,scalable:!0})}catch{t.innerHTML='<span class="hint">QR을 만들지 못했어요</span>'}}DATA.isNew?($("#ttl").textContent="🔗 새 연결 코드를 만들었어요",$("#sub").innerHTML="지금까지 연결한 기기는 <b>모두 끊겼어요.</b> PC는 연결 키를 다시 붙여 넣고, 폰·태블릿은 QR을 다시 찍어 주세요.<br>나중에 기기를 더 연결할 때는 메뉴 <b>기기 추가하기</b>로 이 키와 QR을 다시 볼 수 있어요."):($("#ttl").textContent="➕ 기기 추가하기",$("#sub").innerHTML="지금 쓰는 연결 키와 QR이에요. 새 기기에 넣어도 <b>이미 연결된 기기는 그대로</b>예요."),$("#exec").value=DATA.execUrl||"",$("#app").value=DATA.appUrl||"",$("#exec").oninput=draw,$("#exec").onchange=function(){google.script.run.saveExecUrl($("#exec").value.trim())},$("#app").oninput=function(){draw()},$("#app").onchange=function(){google.script.run.saveAppUrl($("#app").value.trim())},$("#cp").onclick=function(){var e=keyOf();e&&navigator.clipboard.writeText(e).then(function(){$("#cpm").textContent="복사했어요"},function(){$("#key").select(),document.execCommand("copy"),$("#cpm").textContent="복사했어요"})},draw();
 </script></body></html>
