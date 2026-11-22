@@ -1,10 +1,10 @@
 {
-  "version": "1.5.5",
+  "version": "1.5.6",
   "files": [
     "core.gs",
     "Dialog.html"
   ],
   "shell": 2,
   "note": "",
-  "at": "2026-11-21T18:25:32.100Z"
+  "at": "2026-11-22T08:35:21.068Z"
 }
